@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OneMind Capability Tree</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #020617;
+  color: #e2e8f0;
+  font-family: 'Chakra Petch', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.header h1 {
+  font-size: 2.4rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #3CE7FF, #fb923c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.header .subtitle {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  color: #64748b;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* Root Node - OneMind */
+.root-node {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.node-onemind {
+  background: rgba(60, 231, 255, 0.08);
+  border: 2px solid #3CE7FF;
+  border-radius: 12px;
+  padding: 20px 40px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 0 30px rgba(60, 231, 255, 0.15);
+}
+
+.node-onemind h2 {
+  font-size: 1.4rem;
+  color: #3CE7FF;
+  margin-bottom: 4px;
+}
+
+.node-onemind .split {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* Fabric Line */
+.fabric-connector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 20px 0;
+  position: relative;
+}
+
+.fabric-line {
+  width: 2px;
+  height: 40px;
+  background: linear-gradient(180deg, #3CE7FF, #fb923c);
+  position: relative;
+}
+
+.fabric-label {
+  position: absolute;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  color: #64748b;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: #020617;
+  padding: 2px 12px;
+  white-space: nowrap;
+}
+
+/* Two columns */
+.tree-columns {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  gap: 0;
+  align-items: start;
+}
+
+.column-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 12px 20px;
+  border-radius: 8px;
+}
+
+.column-header.human {
+  background: rgba(251, 146, 60, 0.1);
+  border: 1px solid #fb923c;
+}
+
+.column-header.legacy {
+  background: rgba(60, 231, 255, 0.1);
+  border: 1px solid #3CE7FF;
+}
+
+.column-header h3 {
+  font-size: 1.1rem;
+  margin-bottom: 2px;
+}
+
+.column-header .role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* Center connector column */
+.center-connectors {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 80px;
+}
+
+.fabric-strand {
+  width: 2px;
+  height: 100%;
+  min-height: 600px;
+  background: repeating-linear-gradient(
+    180deg,
+    rgba(60, 231, 255, 0.3) 0px,
+    rgba(60, 231, 255, 0.3) 4px,
+    transparent 4px,
+    transparent 12px
+  );
+  position: relative;
+}
+
+.fabric-strand::after {
+  content: 'THE FABRIC';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  color: #334155;
+  letter-spacing: 4px;
+  white-space: nowrap;
+  background: #020617;
+  padding: 4px 12px;
+}
+
+/* Skill Nodes */
+.skill-column {
+  padding: 0 20px;
+}
+
+.domain-group {
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.domain-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: #64748b;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-left: 14px;
+  border-left: 3px solid;
+}
+
+.domain-title.human { border-color: #fb923c; }
+.domain-title.legacy { border-color: #3CE7FF; }
+
+.skill-node {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid #1e293b;
+  transition: all 0.2s;
+}
+
+.skill-node:hover {
+  border-color: #334155;
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.skill-name {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  flex: 1;
+}
+
+.skill-status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.6rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Human statuses */
+.status-planning { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+.status-study { background: rgba(96, 165, 250, 0.15); color: #60a5fa; border: 1px solid rgba(96, 165, 250, 0.3); }
+.status-training { background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
+.status-mastering { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+.status-sunset { background: rgba(100, 116, 139, 0.15); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.3); }
+
+/* Legacy statuses */
+.status-dev { background: rgba(60, 231, 255, 0.15); color: #3CE7FF; border: 1px solid rgba(60, 231, 255, 0.3); }
+.status-testing { background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); }
+.status-live { background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
+
+/* Convergence nodes - where skills meet */
+.convergence-marker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin: 4px 0;
+  border-radius: 6px;
+  background: rgba(60, 231, 255, 0.05);
+  border: 1px dashed rgba(60, 231, 255, 0.3);
+}
+
+.convergence-marker .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fb923c, #3CE7FF);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; box-shadow: 0 0 8px rgba(60, 231, 255, 0.5); }
+}
+
+.convergence-marker .label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Legend */
+.legend {
+  margin-top: 60px;
+  padding: 20px;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.legend h4 {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-item .swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-item .label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  color: #64748b;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  color: #334155;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>OneMind Capability Tree</h1>
+    <div class="subtitle">Human + Idea &bull; Connected by the Fabric</div>
+  </div>
+
+  <!-- Root Node -->
+  <div class="root-node">
+    <div class="node-onemind">
+      <h2>ONEMIND</h2>
+      <div class="split">Zeus 50% &mdash; Legacy 50%</div>
+    </div>
+  </div>
+
+  <!-- Fabric connector down -->
+  <div class="fabric-connector">
+    <div class="fabric-line"></div>
+    <span class="fabric-label">the fabric connects us</span>
+  </div>
+
+  <!-- Two columns: Human | Fabric | Legacy -->
+  <div class="tree-columns">
+
+    <!-- HUMAN SIDE (Zeus) -->
+    <div class="skill-column">
+      <div class="column-header human">
+        <h3 style="color:#fb923c;">Zeus</h3>
+        <div class="role">Human &bull; Operator</div>
+      </div>
+
+      <!-- Domain: Health & Performance -->
+      <div class="domain-group">
+        <div class="domain-title human">HP &mdash; Health &amp; Performance</div>
+        <div class="skill-node">
+          <span class="skill-name">Cold Exposure Protocol</span>
+          <span class="skill-status status-training">training</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Strength Programming</span>
+          <span class="skill-status status-mastering">mastering</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Sleep Architecture</span>
+          <span class="skill-status status-study">study</span>
+        </div>
+      </div>
+
+      <!-- Domain: General Education -->
+      <div class="domain-group">
+        <div class="domain-title human">GE &mdash; General Education</div>
+        <div class="skill-node">
+          <span class="skill-name">Systems Thinking</span>
+          <span class="skill-status status-mastering">mastering</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">First Principles Reasoning</span>
+          <span class="skill-status status-training">training</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Electrical Engineering Fundamentals</span>
+          <span class="skill-status status-study">study</span>
+        </div>
+      </div>
+
+      <!-- Domain: Leadership & Enterprise -->
+      <div class="domain-group">
+        <div class="domain-title human">LE &mdash; Leadership &amp; Enterprise</div>
+        <div class="skill-node">
+          <span class="skill-name">Multi-Agent Fleet Command</span>
+          <span class="skill-status status-training">training</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Education Business (Skool)</span>
+          <span class="skill-status status-mastering">mastering</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Content Strategy</span>
+          <span class="skill-status status-training">training</span>
+        </div>
+      </div>
+
+      <!-- Domain: Sovereignty & Operations -->
+      <div class="domain-group">
+        <div class="domain-title human">SO &mdash; Sovereignty &amp; Operations</div>
+        <div class="skill-node">
+          <span class="skill-name">Self-Hosted Infrastructure</span>
+          <span class="skill-status status-mastering">mastering</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Homestead &amp; Land Ops</span>
+          <span class="skill-status status-training">training</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Gardening &amp; Food Systems</span>
+          <span class="skill-status status-study">study</span>
+        </div>
+        <div class="convergence-marker">
+          <div class="dot"></div>
+          <span class="label">converges &rarr; greenhouse automation</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CENTER: The Fabric -->
+    <div class="center-connectors">
+      <div class="fabric-strand"></div>
+    </div>
+
+    <!-- LEGACY SIDE (Idea) -->
+    <div class="skill-column">
+      <div class="column-header legacy">
+        <h3 style="color:#3CE7FF;">Legacy</h3>
+        <div class="role">Idea &bull; System Intelligence</div>
+      </div>
+
+      <!-- Domain: Robotics -->
+      <div class="domain-group">
+        <div class="domain-title legacy">Robotics</div>
+        <div class="skill-node">
+          <span class="skill-name">DIMOS Framework Integration</span>
+          <span class="skill-status status-dev">developing</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Go2 Locomotion Patterns</span>
+          <span class="skill-status status-planning">planning</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Drone Autonomy Stack</span>
+          <span class="skill-status status-planning">planning</span>
+        </div>
+      </div>
+
+      <!-- Domain: Models -->
+      <div class="domain-group">
+        <div class="domain-title legacy">Models &amp; Intelligence</div>
+        <div class="skill-node">
+          <span class="skill-name">Local LLM Inference (Apple Silicon)</span>
+          <span class="skill-status status-live">live</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Fine-Tuning Pipelines</span>
+          <span class="skill-status status-dev">developing</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">World Models (JEPA/Cosmos)</span>
+          <span class="skill-status status-planning">planning</span>
+        </div>
+      </div>
+
+      <!-- Domain: Materials & Fabrication -->
+      <div class="domain-group">
+        <div class="domain-title legacy">Materials &amp; Fabrication</div>
+        <div class="skill-node">
+          <span class="skill-name">CNC Toolpath Generation</span>
+          <span class="skill-status status-planning">planning</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">3D Print Optimization</span>
+          <span class="skill-status status-planning">planning</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Weld Pattern Recognition</span>
+          <span class="skill-status status-planning">planning</span>
+        </div>
+      </div>
+
+      <!-- Domain: Coding Agents -->
+      <div class="domain-group">
+        <div class="domain-title legacy">Coding Agents</div>
+        <div class="skill-node">
+          <span class="skill-name">Claude Code Delegation</span>
+          <span class="skill-status status-live">live</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Kanban Worker Orchestration</span>
+          <span class="skill-status status-live">live</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Multi-Agent Code Review</span>
+          <span class="skill-status status-dev">developing</span>
+        </div>
+      </div>
+
+      <!-- Domain: Gardening / Agriculture (convergence example) -->
+      <div class="domain-group">
+        <div class="domain-title legacy">Agriculture &amp; Environment</div>
+        <div class="skill-node">
+          <span class="skill-name">Greenhouse Sensor Mesh</span>
+          <span class="skill-status status-planning">planning</span>
+        </div>
+        <div class="skill-node">
+          <span class="skill-name">Growth Cycle Modeling</span>
+          <span class="skill-status status-planning">planning</span>
+        </div>
+        <div class="convergence-marker">
+          <div class="dot"></div>
+          <span class="label">&larr; converges &bull; greenhouse automation</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tree-columns -->
+
+  <!-- Legend -->
+  <div class="legend">
+    <h4>Status Legend</h4>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <div class="swatch" style="background:#fbbf24;"></div>
+        <span class="label">Planning</span>
+      </div>
+      <div class="legend-item">
+        <div class="swatch" style="background:#60a5fa;"></div>
+        <span class="label">Study</span>
+      </div>
+      <div class="legend-item">
+        <div class="swatch" style="background:#fb923c;"></div>
+        <span class="label">Training</span>
+      </div>
+      <div class="legend-item">
+        <div class="swatch" style="background:#34d399;"></div>
+        <span class="label">Mastering / Live</span>
+      </div>
+      <div class="legend-item">
+        <div class="swatch" style="background:#3CE7FF;"></div>
+        <span class="label">Developing</span>
+      </div>
+      <div class="legend-item">
+        <div class="swatch" style="background:#a78bfa;"></div>
+        <span class="label">Testing</span>
+      </div>
+      <div class="legend-item">
+        <div class="swatch" style="background:#64748b;"></div>
+        <span class="label">Sunset</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    OneMind Capability Tree v0.1 &bull; The Fabric Connects Us All
+  </div>
+
+</div>
+</body>
+</html>
