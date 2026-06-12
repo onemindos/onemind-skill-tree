@@ -640,6 +640,7 @@ body {
     <button class="view-tab" data-view="convergence">Convergence</button>
     <button class="view-tab" data-view="depth">Depth</button>
     <button class="view-tab" data-view="matrix">Matrix</button>
+    <button class="view-tab" data-view="graph">Graph</button>
   </div>
 
   <!-- ==================== VIEW 1: TREE ==================== -->
@@ -1478,6 +1479,32 @@ body {
     </div>
   </div>
 
+  <!-- ==================== VIEW 5: GRAPH ==================== -->
+  <div class="view" id="view-graph">
+    <div style="text-align:center;margin-bottom:16px;">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:#64748b;">
+        Drag nodes to explore &bull; Scroll to zoom &bull; Lines show dependencies &amp; convergence
+      </span>
+    </div>
+    <div style="border:1px solid #1e293b;border-radius:12px;overflow:hidden;background:#0f172a;">
+      <canvas id="graph-canvas" width="1500" height="900" style="display:block;width:100%;height:auto;cursor:grab;"></canvas>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#64748b;display:flex;align-items:center;gap:6px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#fb923c;display:inline-block;"></span> Zeus (Human)
+      </span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#64748b;display:flex;align-items:center;gap:6px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#3CE7FF;display:inline-block;"></span> Legacy (Idea)
+      </span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#64748b;display:flex;align-items:center;gap:6px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#a78bfa;display:inline-block;"></span> Convergence Point
+      </span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#64748b;display:flex;align-items:center;gap:6px;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#fbbf24;display:inline-block;"></span> OneMind (Root)
+      </span>
+    </div>
+  </div>
+
   <!-- Legend -->
   <div class="legend">
     <h4>Status Legend</h4>
@@ -1510,8 +1537,488 @@ document.querySelectorAll('.view-tab').forEach(tab => {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('view-' + tab.dataset.view).classList.add('active');
+    if (tab.dataset.view === 'graph') initGraph();
   });
 });
+
+// ==================== GRAPH ENGINE ====================
+let graphInited = false;
+
+function initGraph() {
+  if (graphInited) return;
+  graphInited = true;
+
+  const canvas = document.getElementById('graph-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Node types: root, human, legacy, convergence
+  const COLORS = {
+    root: '#fbbf24',
+    human: '#fb923c',
+    legacy: '#3CE7FF',
+    convergence: '#a78bfa'
+  };
+
+  // Define all nodes
+  const nodes = [
+    // Root
+    { id: 'onemind', label: 'ONEMIND', type: 'root', r: 28 },
+
+    // Human domain headers
+    { id: 'personal', label: 'Personal', type: 'human', r: 20 },
+    { id: 'business', label: 'Business', type: 'human', r: 20 },
+    { id: 'legacy-d', label: 'Legacy', type: 'human', r: 20 },
+    { id: 'operations', label: 'Operations', type: 'human', r: 20 },
+
+    // Legacy domain headers
+    { id: 'robotics', label: 'Robotics', type: 'legacy', r: 20 },
+    { id: 'models', label: 'Models & Intel', type: 'legacy', r: 20 },
+    { id: 'materials', label: 'Materials', type: 'legacy', r: 20 },
+    { id: 'coding', label: 'Coding Agents', type: 'legacy', r: 20 },
+    { id: 'agriculture', label: 'Agriculture', type: 'legacy', r: 20 },
+
+    // Human skills - Personal
+    { id: 'cold', label: 'Cold Exposure', type: 'human', r: 12 },
+    { id: 'strength', label: 'Strength', type: 'human', r: 12 },
+    { id: 'sleep', label: 'Sleep Architecture', type: 'human', r: 12 },
+    { id: 'nutrition', label: 'Nutrition', type: 'human', r: 12 },
+
+    // Human skills - Business
+    { id: 'skool', label: 'Skool Education', type: 'human', r: 12 },
+    { id: 'content', label: 'Content Strategy', type: 'human', r: 12 },
+    { id: 'ads', label: 'Paid Ads', type: 'human', r: 12 },
+    { id: 'community', label: 'Community Lead', type: 'human', r: 12 },
+
+    // Human skills - Legacy domain
+    { id: 'systems', label: 'Systems Thinking', type: 'human', r: 12 },
+    { id: 'firstprinciples', label: 'First Principles', type: 'human', r: 12 },
+    { id: 'aiarch', label: 'AI Agent Arch', type: 'human', r: 12 },
+    { id: 'robointuition', label: 'Robotics Intuition', type: 'human', r: 12 },
+    { id: 'electrical', label: 'Electrical Eng', type: 'human', r: 12 },
+
+    // Human skills - Operations
+    { id: 'selfhosted', label: 'Self-Hosted Infra', type: 'human', r: 12 },
+    { id: 'homestead', label: 'Homestead Ops', type: 'human', r: 12 },
+    { id: 'gardening', label: 'Gardening', type: 'human', r: 12 },
+    { id: 'vehicles', label: 'Vehicle Maint', type: 'human', r: 12 },
+
+    // Legacy skills - Robotics
+    { id: 'dimos', label: 'DIMOS', type: 'legacy', r: 12 },
+    { id: 'go2', label: 'Go2 Locomotion', type: 'legacy', r: 12 },
+    { id: 'drone', label: 'Drone Autonomy', type: 'legacy', r: 12 },
+    { id: 'sensor', label: 'Sensor Fusion', type: 'legacy', r: 12 },
+
+    // Legacy skills - Models
+    { id: 'localllm', label: 'Local LLM', type: 'legacy', r: 12 },
+    { id: 'finetune', label: 'Fine-Tuning', type: 'legacy', r: 12 },
+    { id: 'worldmodels', label: 'World Models', type: 'legacy', r: 12 },
+    { id: 'rag', label: 'RAG & Retrieval', type: 'legacy', r: 12 },
+
+    // Legacy skills - Materials
+    { id: 'cnc', label: 'CNC Toolpath', type: 'legacy', r: 12 },
+    { id: '3dprint', label: '3D Print', type: 'legacy', r: 12 },
+    { id: 'weld', label: 'Weld Patterns', type: 'legacy', r: 12 },
+
+    // Legacy skills - Coding
+    { id: 'claude', label: 'Claude Code', type: 'legacy', r: 12 },
+    { id: 'kanban', label: 'Kanban Workers', type: 'legacy', r: 12 },
+    { id: 'codereview', label: 'Code Review', type: 'legacy', r: 12 },
+    { id: 'skillsys', label: 'Skill System', type: 'legacy', r: 12 },
+
+    // Legacy skills - Agriculture
+    { id: 'greenhouse', label: 'Greenhouse Mesh', type: 'legacy', r: 12 },
+    { id: 'growthmodel', label: 'Growth Modeling', type: 'legacy', r: 12 },
+    { id: 'irrigation', label: 'Irrigation Auto', type: 'legacy', r: 12 },
+
+    // Legacy - extra
+    { id: 'biometric', label: 'Biometric Pipeline', type: 'legacy', r: 12 },
+    { id: 'recovery', label: 'Recovery Analysis', type: 'legacy', r: 12 },
+
+    // Convergence nodes
+    { id: 'conv-greenhouse', label: 'Greenhouse\nAutomation', type: 'convergence', r: 18 },
+    { id: 'conv-fleet', label: 'Autonomous\nFleet Command', type: 'convergence', r: 18 },
+    { id: 'conv-content', label: 'Sovereign\nContent Engine', type: 'convergence', r: 18 },
+    { id: 'conv-fab', label: 'Intelligent\nFabrication', type: 'convergence', r: 18 },
+    { id: 'conv-health', label: 'Quantified\nSelf Protocol', type: 'convergence', r: 18 },
+  ];
+
+  // Define edges [source, target, type]
+  // type: 'domain' (domain membership), 'feeds' (skill feeds convergence), 'depends' (dependency)
+  const edges = [
+    // Root to domains
+    ['onemind', 'personal', 'domain'],
+    ['onemind', 'business', 'domain'],
+    ['onemind', 'legacy-d', 'domain'],
+    ['onemind', 'operations', 'domain'],
+    ['onemind', 'robotics', 'domain'],
+    ['onemind', 'models', 'domain'],
+    ['onemind', 'materials', 'domain'],
+    ['onemind', 'coding', 'domain'],
+    ['onemind', 'agriculture', 'domain'],
+
+    // Personal skills
+    ['personal', 'cold', 'domain'],
+    ['personal', 'strength', 'domain'],
+    ['personal', 'sleep', 'domain'],
+    ['personal', 'nutrition', 'domain'],
+
+    // Business skills
+    ['business', 'skool', 'domain'],
+    ['business', 'content', 'domain'],
+    ['business', 'ads', 'domain'],
+    ['business', 'community', 'domain'],
+
+    // Legacy-domain skills
+    ['legacy-d', 'systems', 'domain'],
+    ['legacy-d', 'firstprinciples', 'domain'],
+    ['legacy-d', 'aiarch', 'domain'],
+    ['legacy-d', 'robointuition', 'domain'],
+    ['legacy-d', 'electrical', 'domain'],
+
+    // Operations skills
+    ['operations', 'selfhosted', 'domain'],
+    ['operations', 'homestead', 'domain'],
+    ['operations', 'gardening', 'domain'],
+    ['operations', 'vehicles', 'domain'],
+
+    // Robotics skills
+    ['robotics', 'dimos', 'domain'],
+    ['robotics', 'go2', 'domain'],
+    ['robotics', 'drone', 'domain'],
+    ['robotics', 'sensor', 'domain'],
+
+    // Models skills
+    ['models', 'localllm', 'domain'],
+    ['models', 'finetune', 'domain'],
+    ['models', 'worldmodels', 'domain'],
+    ['models', 'rag', 'domain'],
+    ['models', 'biometric', 'domain'],
+    ['models', 'recovery', 'domain'],
+
+    // Materials skills
+    ['materials', 'cnc', 'domain'],
+    ['materials', '3dprint', 'domain'],
+    ['materials', 'weld', 'domain'],
+
+    // Coding skills
+    ['coding', 'claude', 'domain'],
+    ['coding', 'kanban', 'domain'],
+    ['coding', 'codereview', 'domain'],
+    ['coding', 'skillsys', 'domain'],
+
+    // Agriculture skills
+    ['agriculture', 'greenhouse', 'domain'],
+    ['agriculture', 'growthmodel', 'domain'],
+    ['agriculture', 'irrigation', 'domain'],
+
+    // === CONVERGENCE CONNECTIONS (the interesting part) ===
+
+    // Greenhouse Automation
+    ['gardening', 'conv-greenhouse', 'feeds'],
+    ['homestead', 'conv-greenhouse', 'feeds'],
+    ['greenhouse', 'conv-greenhouse', 'feeds'],
+    ['growthmodel', 'conv-greenhouse', 'feeds'],
+    ['irrigation', 'conv-greenhouse', 'feeds'],
+    ['selfhosted', 'conv-greenhouse', 'depends'],
+
+    // Autonomous Fleet Command
+    ['systems', 'conv-fleet', 'feeds'],
+    ['aiarch', 'conv-fleet', 'feeds'],
+    ['robointuition', 'conv-fleet', 'feeds'],
+    ['dimos', 'conv-fleet', 'feeds'],
+    ['go2', 'conv-fleet', 'feeds'],
+    ['drone', 'conv-fleet', 'feeds'],
+    ['sensor', 'conv-fleet', 'feeds'],
+    ['worldmodels', 'conv-fleet', 'feeds'],
+
+    // Sovereign Content Engine
+    ['content', 'conv-content', 'feeds'],
+    ['community', 'conv-content', 'feeds'],
+    ['skool', 'conv-content', 'feeds'],
+    ['ads', 'conv-content', 'feeds'],
+    ['claude', 'conv-content', 'feeds'],
+    ['kanban', 'conv-content', 'feeds'],
+    ['codereview', 'conv-content', 'feeds'],
+    ['rag', 'conv-content', 'feeds'],
+    ['skillsys', 'conv-content', 'feeds'],
+    ['selfhosted', 'conv-content', 'depends'],
+
+    // Intelligent Fabrication
+    ['vehicles', 'conv-fab', 'feeds'],
+    ['electrical', 'conv-fab', 'feeds'],
+    ['cnc', 'conv-fab', 'feeds'],
+    ['3dprint', 'conv-fab', 'feeds'],
+    ['weld', 'conv-fab', 'feeds'],
+
+    // Quantified Self Protocol
+    ['strength', 'conv-health', 'feeds'],
+    ['cold', 'conv-health', 'feeds'],
+    ['sleep', 'conv-health', 'feeds'],
+    ['nutrition', 'conv-health', 'feeds'],
+    ['biometric', 'conv-health', 'feeds'],
+    ['recovery', 'conv-health', 'feeds'],
+
+    // Cross-dependencies (non-convergence)
+    ['finetune', 'localllm', 'depends'],
+    ['recovery', 'biometric', 'depends'],
+    ['firstprinciples', 'systems', 'depends'],
+    ['aiarch', 'selfhosted', 'depends'],
+  ];
+
+  // Initialize positions with some structure
+  const nodeMap = {};
+  nodes.forEach((n, i) => {
+    n.x = W/2 + (Math.random() - 0.5) * 600;
+    n.y = H/2 + (Math.random() - 0.5) * 500;
+    n.vx = 0;
+    n.vy = 0;
+    n.fx = null;
+    n.fy = null;
+    nodeMap[n.id] = n;
+  });
+
+  // Seed positions for better initial layout
+  nodeMap['onemind'].x = W/2; nodeMap['onemind'].y = 80;
+  // Human domains left side
+  nodeMap['personal'].x = 200; nodeMap['personal'].y = 220;
+  nodeMap['business'].x = 400; nodeMap['business'].y = 220;
+  nodeMap['legacy-d'].x = 300; nodeMap['legacy-d'].y = 380;
+  nodeMap['operations'].x = 200; nodeMap['operations'].y = 500;
+  // Legacy domains right side
+  nodeMap['robotics'].x = 1100; nodeMap['robotics'].y = 220;
+  nodeMap['models'].x = 1300; nodeMap['models'].y = 220;
+  nodeMap['materials'].x = 1100; nodeMap['materials'].y = 400;
+  nodeMap['coding'].x = 1300; nodeMap['coding'].y = 400;
+  nodeMap['agriculture'].x = 1200; nodeMap['agriculture'].y = 560;
+  // Convergence in the middle
+  nodeMap['conv-greenhouse'].x = 700; nodeMap['conv-greenhouse'].y = 700;
+  nodeMap['conv-fleet'].x = 750; nodeMap['conv-fleet'].y = 350;
+  nodeMap['conv-content'].x = 750; nodeMap['conv-content'].y = 500;
+  nodeMap['conv-fab'].x = 650; nodeMap['conv-fab'].y = 600;
+  nodeMap['conv-health'].x = 400; nodeMap['conv-health'].y = 600;
+
+  // Physics simulation
+  const SIM_STEPS = 300;
+  let step = 0;
+  let animFrame;
+  let zoom = 1, panX = 0, panY = 0;
+  let dragging = null, dragOffX = 0, dragOffY = 0;
+  let lastMouse = { x: 0, y: 0 };
+  let isPanning = false;
+
+  function simulate() {
+    const alpha = Math.max(0.01, 1 - step / SIM_STEPS);
+    const repulsion = 8000;
+    const attraction = 0.005;
+    const edgeLen = 120;
+    const damping = 0.85;
+    const centerPull = 0.001;
+
+    // Repulsion between all nodes
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        let dx = nodes[j].x - nodes[i].x;
+        let dy = nodes[j].y - nodes[i].y;
+        let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        let force = repulsion / (dist * dist);
+        let fx = (dx / dist) * force * alpha;
+        let fy = (dy / dist) * force * alpha;
+        nodes[i].vx -= fx;
+        nodes[i].vy -= fy;
+        nodes[j].vx += fx;
+        nodes[j].vy += fy;
+      }
+    }
+
+    // Attraction along edges
+    edges.forEach(([src, tgt, type]) => {
+      const a = nodeMap[src], b = nodeMap[tgt];
+      if (!a || !b) return;
+      let dx = b.x - a.x;
+      let dy = b.y - a.y;
+      let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      let targetLen = type === 'domain' ? 100 : 180;
+      let force = (dist - targetLen) * attraction * alpha;
+      let fx = (dx / dist) * force;
+      let fy = (dy / dist) * force;
+      a.vx += fx;
+      a.vy += fy;
+      b.vx -= fx;
+      b.vy -= fy;
+    });
+
+    // Center gravity
+    nodes.forEach(n => {
+      n.vx += (W/2 - n.x) * centerPull * alpha;
+      n.vy += (H/2 - n.y) * centerPull * alpha;
+    });
+
+    // Apply velocity
+    nodes.forEach(n => {
+      if (n.fx !== null) { n.x = n.fx; n.y = n.fy; n.vx = 0; n.vy = 0; return; }
+      n.vx *= damping;
+      n.vy *= damping;
+      n.x += n.vx;
+      n.y += n.vy;
+      // Bounds
+      n.x = Math.max(n.r + 10, Math.min(W - n.r - 10, n.x));
+      n.y = Math.max(n.r + 10, Math.min(H - n.r - 10, n.y));
+    });
+
+    step++;
+  }
+
+  function draw() {
+    ctx.save();
+    ctx.clearRect(0, 0, W, H);
+
+    // Background grid
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x < W; x += 40) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += 40) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    ctx.translate(panX, panY);
+    ctx.scale(zoom, zoom);
+
+    // Draw edges
+    edges.forEach(([src, tgt, type]) => {
+      const a = nodeMap[src], b = nodeMap[tgt];
+      if (!a || !b) return;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      if (type === 'domain') {
+        ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+      } else if (type === 'feeds') {
+        ctx.strokeStyle = 'rgba(167, 139, 250, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+      } else if (type === 'depends') {
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([2, 4]);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    });
+
+    // Draw nodes
+    nodes.forEach(n => {
+      const color = COLORS[n.type];
+
+      // Glow for convergence
+      if (n.type === 'convergence') {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + 6, 0, Math.PI * 2);
+        ctx.fillStyle = color.replace(')', ', 0.1)').replace('rgb', 'rgba').replace('#', '');
+        let grad = ctx.createRadialGradient(n.x, n.y, n.r, n.x, n.y, n.r + 10);
+        grad.addColorStop(0, color + '33');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.fill();
+      }
+
+      // Node circle
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = n.type === 'root' ? 3 : (n.r > 14 ? 2 : 1.5);
+      ctx.stroke();
+
+      // Label
+      ctx.fillStyle = color;
+      ctx.font = (n.r > 14 ? '10px' : '8px') + " 'IBM Plex Mono', monospace";
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const lines = n.label.split('\n');
+      lines.forEach((line, i) => {
+        const yOff = (i - (lines.length - 1) / 2) * 11;
+        ctx.fillText(line, n.x, n.y + yOff);
+      });
+    });
+
+    ctx.restore();
+    if (step < SIM_STEPS) simulate();
+    animFrame = requestAnimationFrame(draw);
+  }
+
+  // Mouse interaction
+  function screenToGraph(mx, my) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = (mx - rect.left) * (W / rect.width);
+    const sy = (my - rect.top) * (H / rect.height);
+    return { x: (sx - panX) / zoom, y: (sy - panY) / zoom };
+  }
+
+  canvas.addEventListener('mousedown', (e) => {
+    const p = screenToGraph(e.clientX, e.clientY);
+    // Find closest node
+    let closest = null, minDist = Infinity;
+    nodes.forEach(n => {
+      const d = Math.sqrt((n.x - p.x) ** 2 + (n.y - p.y) ** 2);
+      if (d < n.r + 5 && d < minDist) { closest = n; minDist = d; }
+    });
+    if (closest) {
+      dragging = closest;
+      dragging.fx = dragging.x;
+      dragging.fy = dragging.y;
+      canvas.style.cursor = 'grabbing';
+    } else {
+      isPanning = true;
+      lastMouse = { x: e.clientX, y: e.clientY };
+      canvas.style.cursor = 'move';
+    }
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (dragging) {
+      const p = screenToGraph(e.clientX, e.clientY);
+      dragging.fx = p.x;
+      dragging.fy = p.y;
+      dragging.x = p.x;
+      dragging.y = p.y;
+      step = Math.max(0, step - 5); // reheat
+    } else if (isPanning) {
+      const dx = e.clientX - lastMouse.x;
+      const dy = e.clientY - lastMouse.y;
+      panX += dx;
+      panY += dy;
+      lastMouse = { x: e.clientX, y: e.clientY };
+    }
+  });
+
+  canvas.addEventListener('mouseup', () => {
+    if (dragging) { dragging.fx = null; dragging.fy = null; dragging = null; }
+    isPanning = false;
+    canvas.style.cursor = 'grab';
+  });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const scale = e.deltaY > 0 ? 0.9 : 1.1;
+    const rect = canvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) * (W / rect.width);
+    const my = (e.clientY - rect.top) * (H / rect.height);
+    panX = mx - (mx - panX) * scale;
+    panY = my - (my - panY) * scale;
+    zoom *= scale;
+    zoom = Math.max(0.3, Math.min(3, zoom));
+  }, { passive: false });
+
+  // Run initial sim steps quickly then animate
+  for (let i = 0; i < 150; i++) simulate();
+  draw();
+}
 </script>
 </body>
 </html>
